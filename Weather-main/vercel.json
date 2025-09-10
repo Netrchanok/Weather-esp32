@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "name": "thai-weather-app",
+  "builds": [
+    {
+      "src": "server.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/server.js"
+    }
+  ],
+  "env": {
+    "PORT": "3000"
+  }
+}
