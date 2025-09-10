@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="เว็บแอปพลิเคชันพยากรณ์อากาศไทย แสดงสภาพอากาศปัจจุบันและพยากรณ์อากาศ 5 วันข้างหน้า">
+    <meta name="author" content="Perapat & Phirawit">
+    <meta name="keywords" content="พยากรณ์อากาศ, สภาพอากาศไทย, Thai Weather, อุณหภูมิ, ความชื้น">
+    <title>พยากรณ์อากาศไทย - Thai Weather App</title>
+
+    <!-- Fonts & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* General */
+        body { 
+            font-family: 'Sarabun', sans-serif; 
+            background: #1f1f1f;
+            color: #e0e0e0;
+        }
+
+        .weather-card {
+            background: #2a2a2a;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            padding: 16px;
+        }
+
+        nav {
+            background: #1c1c1c;
+            border-bottom: 1px solid #444;
+        }
+
+        /* Buttons */
+        .chart-tab-btn, button#searchBtn, button#refreshBtn, button#locationBtn {
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .chart-tab-btn {
+            background: #3a3a3a;
+            color: #e0e0e0;
+            border: 1px solid #555;
+        }
+
+        .chart-tab-btn:hover {
+            background: #505050;
+        }
+
+        .chart-tab-btn.active {
+            background: #ffbf00;
+            color: #1f1f1f;
+            border-color: #ffbf00;
+        }
+
+        button#searchBtn {
+            background-color: #ffbf00;
+            color: #1f1f1f;
+            border: none;
+        }
+
+        button#searchBtn:hover {
+            background-color: #e6ac00;
+        }
+
+        button#refreshBtn, button#locationBtn {
+            background: transparent;
+            color: #e0e0e0;
+            border: none;
+        }
+
+        button#refreshBtn:hover, button#locationBtn:hover {
+            color: #ffbf00;
+        }
+
+        select#provinceSelect {
+            padding: 12px 16px;
+            font-size: 16px;
+            font-weight: 500;
+            background: #3a3a3a;
+            color: #e0e0e0;
+            border: 1px solid #555;
+            border-radius: 8px;
+        }
+
+        /* Forecast Card */
+        .forecast-card {
+            background: #3a3a3a;
+            border-radius: 12px;
+            padding: 12px;
+        }
+
+        /* Chart */
+        .chart-container {
+            height: 400px;
+            background: #2a2a2a;
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        /* Weather Details */
+        .weather-detail {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+        }
+
+        /* Loading Screen */
+        #loading {
+            background: #1f1f1f;
+        }
+
+        /* Error Message */
+        #errorMessage {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 60;
+        }
+
+        /* Misc */
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from {opacity:0} to {opacity:1} }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading" class="fixed inset-0 bg-blue-600 flex items-center justify-center z-50">
+        <div class="text-center text-white">
+            <div class="animate-spin rounded-full h-16 w-16 border-4 border-white border-t-transparent mx-auto mb-4"></div>
+            <h3 class="text-xl font-semibold">กำลังโหลดข้อมูลสภาพอากาศ...</h3>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="bg-white bg-opacity-20 backdrop-blur-lg border-b border-white border-opacity-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <i class="fas fa-cloud-sun text-2xl text-white mr-3"></i>
+                    <div>
+                        <h1 class="text-xl font-bold text-white">พยากรณ์อากาศไทย</h1>
+                        <p class="text-xs text-white text-opacity-70">Thai Weather App</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button id="refreshBtn" class="text-white hover:text-yellow-300 transition-colors" title="รีเฟรชข้อมูล">
+                        <i class="fas fa-redo text-lg"></i>
+                    </button>
+                    <button id="locationBtn" class="text-white hover:text-yellow-300 transition-colors" title="ใช้ตำแหน่งปัจจุบัน">
+                        <i class="fas fa-map-marker-alt text-lg"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Search Section -->
+        <div class="mb-8">
+            <div class="weather-card">
+                <h2 class="text-xl font-semibold mb-4">ค้นหาสภาพอากาศ</h2>
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <select id="provinceSelect" title="เลือกจังหวัด">
+                        <option value="">เลือกจังหวัด...</option>
+                    </select>
+                    <button id="searchBtn">ค้นหา</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sensor Data Section -->
+        <section id="sensorDataSection" class="mb-8 hidden fade-in">
+            <div class="weather-card">
+                <h2 class="text-xl font-semibold mb-4 flex items-center">
+                    <i class="fas fa-microchip mr-2 text-cyan-300"></i> ข้อมูลจากเซ็นเซอร์ ESP32
+                </h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- Sensor Temperature -->
+                    <div class="bg-white bg-opacity-5 rounded-lg p-4 flex items-center">
+                        <i class="fas fa-thermometer-half text-4xl text-red-400 mr-4"></i>
+                        <div>
+                            <p class="text-white text-opacity-80">อุณหภูมิ</p>
+                            <p id="sensorTemperature" class="text-2xl font-bold text-white">- °C</p>
+                        </div>
+                    </div>
+                    <!-- Sensor Humidity -->
+                    <div class="bg-white bg-opacity-5 rounded-lg p-4 flex items-center">
+                        <i class="fas fa-tint text-4xl text-blue-300 mr-4"></i>
+                        <div>
+                            <p class="text-white text-opacity-80">ความชื้น</p>
+                            <p id="sensorHumidity" class="text-2xl font-bold text-white">- %</p>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-xs text-white text-opacity-60 mt-2 text-right">อัปเดตล่าสุด: <span id="sensorLastUpdate">-</span></p>
+            </div>
+        </section>
+
+        <!-- Current Weather Section -->
+        <div id="currentWeather" class="mb-8 hidden fade-in">
+            <div class="weather-card">
+                <div class="text-center mb-6">
+                    <h2 class="text-2xl font-bold mb-2">
+                        <i class="fas fa-map-marker-alt mr-2"></i>
+                        <span id="currentLocation">-</span>
+                    </h2>
+                    <p id="currentTime">-</p>
+                </div>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="text-center">
+                        <div class="weather-icon mb-4">
+                            <i id="weatherIcon" class="fas fa-sun text-6xl text-yellow-300"></i>
+                        </div>
+                        <div class="temperature mb-2" id="temperature">-°C</div>
+                        <p id="weatherDescription">-</p>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        <div class="weather-detail"><span>ทัศนวิสัย</span><span id="visibility">- กม.</span></div>
+                        <div class="weather-detail"><span>ความชื้น</span><span id="humidity">-%</span></div>
+                        <div class="weather-detail"><span>ความกดอากาศ</span><span id="pressure">- hPa</span></div>
+                        <div class="weather-detail"><span>ความเร็วลม</span><span id="windSpeed">- ม./วินาที</span></div>
+                        <div class="weather-detail"><span>พระอาทิตย์ขึ้น</span><span id="sunrise">-</span></div>
+                        <div class="weather-detail"><span>พระอาทิตย์ตก</span><span id="sunset">-</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Forecast Section -->
+        <div id="forecastSection" class="hidden fade-in mb-8">
+            <div class="weather-card">
+                <h2 class="text-xl font-semibold mb-6">พยากรณ์อากาศ 5 วัน</h2>
+                <div id="forecastContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <!-- Forecast cards -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart Section -->
+        <div id="chartSection" class="hidden fade-in mb-8 mt-8">
+            <div class="weather-card">
+                <h2 class="text-xl font-semibold mb-6"><i class="fas fa-chart-line mr-2"></i>กราฟแนวโน้มสภาพอากาศ</h2>
+                <div class="mb-4 flex flex-wrap gap-2">
+                    <button class="chart-tab-btn active" data-chart="temperature"><i class="fas fa-thermometer-half mr-1"></i>อุณหภูมิ</button>
+                    <button class="chart-tab-btn" data-chart="humidity"><i class="fas fa-droplet mr-1"></i>ความชื้น</button>
+                    <button class="chart-tab-btn" data-chart="wind"><i class="fas fa-wind mr-1"></i>ความเร็วลม</button>
+                    <button class="chart-tab-btn" data-chart="pressure"><i class="fas fa-tachometer-alt mr-1"></i>ความกดอากาศ</button>
+                </div>
+                <div class="chart-container">
+                    <canvas id="weatherChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error Message -->
+        <div id="errorMessage" class="hidden">
+            <div class="bg-red-500 bg-opacity-20 border border-red-400 text-red-100 px-4 py-3 rounded-lg">
+                <div class="flex items-center">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                    <span id="errorText">เกิดข้อผิดพลาด</span>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white bg-opacity-10 backdrop-blur-lg mt-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center text-white text-opacity-80">
+            <p>&copy; 2025 พยากรณ์อากาศไทย | ข้อมูลจาก OpenWeatherMap API</p>
+            <p class="text-sm mt-2"><i class="fas fa-info-circle mr-1"></i>อัปเดตข้อมูลล่าสุด: <span id="lastUpdate">-</span></p>
+        </div>
+    </footer>
+
+    <script src="./js/app.js"></script>
+</body>
+</html>
+
+<body>
+  <h1>Weather Station</h1>
+  <p>🌡️ Temperature: <span id="temp">--</span> °C</p>
+  <p>💧 Humidity: <span id="humi">--</span> %</p>
+  <p>⏰ Last Update: <span id="time">--</span></p>
+
+  <script src="/js/app.js"></script>
+</body>
