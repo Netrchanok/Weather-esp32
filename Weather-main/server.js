@@ -20,6 +20,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/api/weather', weatherRoutes);
 app.use('/api/sensor', sensorRoutes); // << เรียกใช้ sensor route
 
+// Serve the main HTML file for any other routes not handled by the API
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 const PORT = process.env.PORT || 3000;
 
 const server = app.listen(PORT, '0.0.0.0', () => {
