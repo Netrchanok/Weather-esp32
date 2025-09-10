@@ -26,3 +26,16 @@ export default async function handler(req, res) {
   }
 }
 
+let data = [];
+
+export default function handler(req, res) {
+  if (req.method === "POST") {
+    data.push({ ...req.body, timestamp: new Date() });
+    console.log("Received sensor data:", req.body);
+    res.status(200).json({ message: "Data received" });
+  } else if (req.method === "GET") {
+    res.status(200).json(data);
+  } else {
+    res.status(405).json({ error: "Method not allowed" });
+  }
+}
