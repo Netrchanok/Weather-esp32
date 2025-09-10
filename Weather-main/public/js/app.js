@@ -599,23 +599,3 @@ class WeatherApp {
 document.addEventListener("DOMContentLoaded", () => {
   new WeatherApp();
 });
-
-async function loadData() {
-  try {
-    let res = await fetch("/api/sensors"); // endpoint ที่ ESP32 ส่งเข้า
-    let data = await res.json();
-
-    // เอาข้อมูลล่าสุด (ตัวท้ายสุดใน array)
-    let latest = data[data.length - 1];
-
-    document.getElementById("temp").innerText = latest.temperature;
-    document.getElementById("humi").innerText = latest.humidity;
-    document.getElementById("time").innerText = new Date(latest.timestamp).toLocaleString();
-  } catch (err) {
-    console.error("Fetch error:", err);
-  }
-}
-
-// โหลดทุกๆ 5 วิ
-loadData();
-setInterval(loadData, 5000);
